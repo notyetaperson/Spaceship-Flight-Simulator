@@ -27,7 +27,6 @@ Explore vast procedurally generated environments, fly realistic spaceships, navi
 | Roll                | Q / E                |
 | Pitch & Yaw         | Mouse                |
 | Fire Weapons        | Left Click           |
-| Pause / Menu        | Esc / P              |
 
 ---
 
