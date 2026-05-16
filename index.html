@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spaceship Flight Simulator</title>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        @keyframes glow {
+            0%, 100% { 
+                text-shadow: 0 0 10px rgba(0, 255, 0, 0.8),
+                            0 0 20px rgba(0, 255, 255, 0.6),
+                            0 0 30px rgba(0, 255, 255, 0.4);
+            }
+            50% { 
+                text-shadow: 0 0 15px rgba(0, 255, 0, 1),
+                            0 0 30px rgba(0, 255, 255, 0.8),
+                            0 0 45px rgba(0, 255, 255, 0.6);
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes borderGlow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(0, 255, 0, 0.5),
+                            inset 0 0 20px rgba(0, 255, 255, 0.1);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(0, 255, 0, 0.8),
+                            0 0 40px rgba(0, 255, 255, 0.4),
+                            inset 0 0 30px rgba(0, 255, 255, 0.2);
+            }
+        }
+        
+        @keyframes scanLine {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 255, 0, 0.05) 0%, transparent 50%),
+                linear-gradient(180deg, rgba(0, 20, 40, 0.5) 0%, rgba(0, 0, 0, 1) 100%);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 255, 255, 0.03) 2px,
+                rgba(0, 255, 255, 0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+            animation: flicker 3s infinite;
+        }
+        
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(0, 255, 255, 0.5),
+                transparent
+            );
+            animation: scanLine 3s linear infinite;
+            pointer-events: none;
+            z-index: 1001;
+        }
+        
+        canvas {
+            display: block;
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.6),
+                        0 0 60px rgba(0, 255, 255, 0.3),
+                        inset 0 0 30px rgba(0, 255, 255, 0.1);
+            animation: borderGlow 3s ease-in-out infinite;
+            position: relative;
+            z-index: 10;
+        }
+        
+        #ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #00ff00;
+            font-size: 14px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ff00;
+            border-left: 4px solid #00ffff;
+            padding: 15px 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5),
+                        inset 0 0 20px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.8s ease-out, borderGlow 3s ease-in-out infinite;
+            min-width: 250px;
+        }
+        
+        #ui::before {
+            content: '◢◣ HUD ◢◣';
+            display: block;
+            color: #00ffff;
+            font-size: 11px;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            text-align: center;
+            animation: glow 2s ease-in-out infinite;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 8px;
+        }
+        
+        #ui > div {
+            margin: 8px 0;
+            padding: 5px 0;
+            border-left: 2px solid rgba(0, 255, 255, 0.3);
+            padding-left: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        #ui > div:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-left-color: #00ffff;
+            transform: translateX(5px);
+        }
+        
+        #ui > div::before {
+            content: '▶';
+            color: #00ffff;
+            margin-right: 8px;
+            font-size: 10px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        #ui span {
+            color: #00ffff;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            color: #00ff00;
+            font-size: 12px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ff00;
+            border-top: 4px solid #00ffff;
+            padding: 15px 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5),
+                        inset 0 0 20px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.8s ease-out, borderGlow 3s ease-in-out infinite;
+            max-width: 800px;
+        }
+        
+        #instructions::before {
+            content: '◢◣ CONTROLS ◢◣';
+            display: block;
+            color: #00ffff;
+            font-size: 11px;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            text-align: center;
+            animation: glow 2s ease-in-out infinite;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 8px;
+        }
+        
+        #instructions::after {
+            content: 'Click planets on the galaxy map to lightspeed jump!';
+            display: block;
+            color: #00ffff;
+            font-size: 11px;
+            margin-top: 10px;
+            text-align: center;
+            font-style: italic;
+            opacity: 0.8;
+            animation: pulse 3s infinite;
+        }
+        
+        .control-item {
+            display: inline-block;
+            margin: 5px 10px;
+            padding: 5px 10px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .control-item:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .control-key {
+            color: #00ffff;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.8);
+        }
+        
+        #speedControl {
+            position: fixed;
+            top: 200px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ff00;
+            border-left: 4px solid #00ffff;
+            padding: 15px 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5),
+                        inset 0 0 20px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            animation: slideIn 1s ease-out 0.2s both, borderGlow 3s ease-in-out infinite;
+            min-width: 250px;
+        }
+        
+        #speedControl::before {
+            content: '◢◣ MAX SPEED ◢◣';
+            display: block;
+            color: #00ffff;
+            font-size: 11px;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+            text-align: center;
+            animation: glow 2s ease-in-out infinite;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 8px;
+        }
+        
+        .speed-slider-container {
+            margin: 10px 0;
+        }
+        
+        .speed-slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #00ff00;
+            font-size: 12px;
+        }
+        
+        .speed-value {
+            color: #00ffff;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        .speed-slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #00ffff;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.8),
+                        0 0 20px rgba(0, 255, 0, 0.5);
+            transition: all 0.2s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        .speed-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 1),
+                        0 0 30px rgba(0, 255, 0, 0.8);
+        }
+        
+        .speed-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #00ffff;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.8),
+                        0 0 20px rgba(0, 255, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+        
+        .speed-slider::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 1),
+                        0 0 30px rgba(0, 255, 0, 0.8);
+        }
+        
+        .speed-slider::-webkit-slider-runnable-track {
+            height: 6px;
+            background: linear-gradient(
+                90deg,
+                rgba(0, 255, 255, 0.2),
+                rgba(0, 255, 0, 0.4),
+                rgba(0, 255, 255, 0.2)
+            );
+            border-radius: 3px;
+            box-shadow: inset 0 0 5px rgba(0, 255, 255, 0.3);
+        }
+        
+        .speed-slider::-moz-range-track {
+            height: 6px;
+            background: linear-gradient(
+                90deg,
+                rgba(0, 255, 255, 0.2),
+                rgba(0, 255, 0, 0.4),
+                rgba(0, 255, 255, 0.2)
+            );
+            border-radius: 3px;
+            box-shadow: inset 0 0 5px rgba(0, 255, 255, 0.3);
+        }
+        
+        .speed-unlimited {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 5px 10px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #00ffff;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .speed-unlimited:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div>Speed: <span id="speed">0</span> m/s</div>
+        <div>Position: <span id="position">0, 0, 0</span></div>
+        <div>Rotation: <span id="rotation">Y:0° P:0°</span></div>
+    </div>
+    <div id="speedControl">
+        <div class="speed-slider-container">
+            <div class="speed-slider-label">
+                <span>Max Speed Limit:</span>
+                <span class="speed-value" id="maxSpeedValue">Unlimited</span>
+            </div>
+            <input type="range" 
+                   class="speed-slider" 
+                   id="maxSpeedSlider" 
+                   min="0" 
+                   max="200" 
+                   value="0"
+                   step="5">
+            <div class="speed-unlimited" id="toggleUnlimited">
+                Toggle Unlimited Speed
+            </div>
+        </div>
+    </div>
+    <div id="instructions">
+        <span class="control-item"><span class="control-key">W/S</span>: Thrust Forward/Back</span>
+        <span class="control-item"><span class="control-key">A/D</span>: Strafe Left/Right</span>
+        <span class="control-item"><span class="control-key">Q/E</span>: Pitch Up/Down</span>
+        <span class="control-item"><span class="control-key">←→</span>: Yaw</span>
+        <span class="control-item"><span class="control-key">↑↓</span>: Roll</span>
+        <span class="control-item"><span class="control-key">SPACE</span>: Pause</span>
+        <span class="control-item"><span class="control-key">M</span>: Fire Missile</span>
+        <span class="control-item"><span class="control-key">L</span>: Fire Laser</span>
+        <span class="control-item"><span class="control-key">X</span>: Self-Destruct</span>
+        <span class="control-item"><span class="control-key">ESC</span>: Exit Planet (in planet mode)</span>
+    </div>
+
+    <!-- Core Game Files -->
+    <script src="js/constants.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utilities.js"></script>
+    <script src="js/math.js"></script>
+    <script src="js/vector.js"></script>
+    <script src="js/vector3d.js"></script>
+    <script src="js/gameState.js"></script>
+    
+    <!-- 3D Engine -->
+    <script src="js/matrix3d.js"></script>
+    <script src="js/projection3d.js"></script>
+    
+    <!-- Entities and Physics -->
+    <script src="js/physics.js"></script>
+    <script src="js/collision.js"></script>
+    <script src="js/spaceship.js"></script>
+    
+    <!-- Controls and Input -->
+    <script src="js/controls.js"></script>
+    
+    <!-- Visual Systems -->
+    <script src="js/camera.js"></script>
+    <script src="js/stars.js"></script>
+    <script src="js/terrain.js"></script>
+    <script src="js/celestial.js"></script>
+    <script src="js/asteroids.js"></script>
+    <script src="js/galaxymap.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/speedEffects.js"></script>
+    <script src="js/waves.js"></script>
+    <script src="js/missiles.js"></script>
+    <script src="js/lasers.js"></script>
+    <script src="js/planetMenu.js"></script>
+    <script src="js/human.js"></script>
+    <script src="js/planetTerrain.js"></script>
+    <script src="js/planetSkybox.js"></script>
+    <script src="js/planetCamera.js"></script>
+    <script src="js/floatingIslands.js"></script>
+    <script src="js/mountains.js"></script>
+    <script src="js/renderer.js"></script>
+    
+    <!-- Animation and Utilities -->
+    <script src="js/animation.js"></script>
+    <script src="js/noise.js"></script>
+    <script src="js/random.js"></script>
+    
+    <!-- Input and Events -->
+    <script src="js/input.js"></script>
+    <script src="js/events.js"></script>
+    
+    <!-- UI and Audio -->
+    <script src="js/ui.js"></script>
+    <script src="js/audio.js"></script>
+    
+    <!-- System Utilities -->
+    <script src="js/storage.js"></script>
+    <script src="js/performance.js"></script>
+    <script src="js/debug.js"></script>
+    
+    <!-- Main Game Loop -->
+    <script src="js/game.js"></script>
+    
+    <script>
+        // Speed control slider handler - initialize after game loads
+        function initSpeedControl() {
+            // Wait for game to be available
+            if (!window.game || !window.game.spaceship) {
+                setTimeout(initSpeedControl, 100);
+                return;
+            }
+            
+            const slider = document.getElementById('maxSpeedSlider');
+            const valueDisplay = document.getElementById('maxSpeedValue');
+            const toggleBtn = document.getElementById('toggleUnlimited');
+            let isUnlimited = true;
+            
+            function updateMaxSpeed(value) {
+                if (window.game && window.game.spaceship) {
+                    if (value === 0 || isUnlimited) {
+                        window.game.spaceship.maxSpeed = Infinity;
+                        valueDisplay.textContent = 'Unlimited';
+                        valueDisplay.style.color = '#00ff00';
+                    } else {
+                        window.game.spaceship.maxSpeed = value;
+                        valueDisplay.textContent = value + ' m/s';
+                        valueDisplay.style.color = '#00ffff';
+                    }
+                }
+            }
+            
+            slider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                isUnlimited = (value === 0);
+                updateMaxSpeed(value);
+            });
+            
+            toggleBtn.addEventListener('click', () => {
+                isUnlimited = !isUnlimited;
+                if (isUnlimited) {
+                    slider.value = 0;
+                    toggleBtn.textContent = 'Toggle Unlimited Speed (ON)';
+                    toggleBtn.style.borderColor = '#00ff00';
+                } else {
+                    const currentValue = parseInt(slider.value) || 50;
+                    slider.value = currentValue;
+                    toggleBtn.textContent = 'Toggle Unlimited Speed (OFF)';
+                    toggleBtn.style.borderColor = '#00ffff';
+                }
+                updateMaxSpeed(parseInt(slider.value));
+            });
+            
+            // Initialize - start with unlimited
+            updateMaxSpeed(0);
+        }
+        
+        window.addEventListener('load', () => {
+            setTimeout(initSpeedControl, 500); // Give game time to initialize
+        });
+    </script>
+</body>
+</html>
+
