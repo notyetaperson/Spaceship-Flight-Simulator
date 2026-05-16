@@ -12,7 +12,6 @@ Explore vast procedurally generated environments, fly realistic spaceships, navi
 
 - Smooth spaceship flight mechanics
 - Procedural planets and terrain
-- Dynamic camera systems (cockpit + free cam)
 - Asteroids, stars, and celestial objects
 - Particle effects and engine trails
 - Physics-based movement and collision
@@ -27,9 +26,6 @@ Explore vast procedurally generated environments, fly realistic spaceships, navi
 | Strafe Left/Right   | A / D                |
 | Roll                | Q / E                |
 | Pitch & Yaw         | Mouse                |
-| Boost               | Shift                |
-| Brake               | Space                |
-| Switch Camera       | C                    |
 | Fire Weapons        | Left Click           |
 | Pause / Menu        | Esc / P              |
 
